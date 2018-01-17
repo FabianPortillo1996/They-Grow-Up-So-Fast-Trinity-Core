@@ -1,0 +1,100 @@
+enum WinterspringCub
+{
+    QUEST_WINTERSPRING_CUB_1            = 29035,
+    QUEST_WINTERSPRING_CUB_2            = 29040,
+    QUEST_WINTERSPRING_CUB_3            = 29038,
+    QUEST_WINTERSPRING_CUB_4            = 29037,
+    SPELL_WINTERSABER_CUB_DAILY_COUNTER = 96011,
+    SPELL_WINTERSABER_CUB_125           = 95951,
+    SPELL_WINTERSABER_CUB_150           = 95952,
+    SPELL_WINTERSABER_CUB_175           = 95953
+};
+
+// 51677
+class npc_winterspring_cub : public CreatureScript
+{
+public:
+    npc_winterspring_cub() : CreatureScript("npc_winterspring_cub") { }
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_winterspring_cubAI(creature);
+    }
+
+    bool OnQuestReward(Player* player, Creature* creature, Quest const* quest, uint32 /*opt*/) override
+    {
+        if (quest->GetQuestId() == QUEST_WINTERSPRING_CUB_1 || quest->GetQuestId() == QUEST_WINTERSPRING_CUB_2 || quest->GetQuestId() == QUEST_WINTERSPRING_CUB_3 || quest->GetQuestId() == QUEST_WINTERSPRING_CUB_4)
+        {
+
+            if (AuraEffect* aurEff = player->GetAuraEffect(SPELL_WINTERSABER_CUB_DAILY_COUNTER, EFFECT_0))
+                aurEff->ChangeAmount(aurEff->GetAmount() + 1);
+            else if (Aura* aura = player->AddAura(SPELL_WINTERSABER_CUB_DAILY_COUNTER, player))
+                if (AuraEffect* auraEff = player->GetAuraEffect(SPELL_WINTERSABER_CUB_DAILY_COUNTER, EFFECT_0))
+                    auraEff->ChangeAmount(auraEff->GetAmount() + 1);
+
+            if (AuraEffect* aurEff = player->GetAuraEffect(SPELL_WINTERSABER_CUB_DAILY_COUNTER, EFFECT_0))
+            {
+                if (aurEff->GetAmount() >= 15)
+                {
+                    creature->RemoveAura(SPELL_WINTERSABER_CUB_150);
+                    creature->AddAura(SPELL_WINTERSABER_CUB_175, creature);
+                }
+                else if (aurEff->GetAmount() >= 10 && aurEff->GetAmount() <15)
+                {
+                    creature->RemoveAura(SPELL_WINTERSABER_CUB_125);
+                    creature->AddAura(SPELL_WINTERSABER_CUB_150, creature);
+                }
+                else if (aurEff->GetAmount() >= 5 && aurEff->GetAmount() < 10)
+                    creature->AddAura(SPELL_WINTERSABER_CUB_125, creature);
+            }
+        }
+
+        return true;
+    }
+
+    struct npc_winterspring_cubAI : public ScriptedAI
+    {
+        npc_winterspring_cubAI(Creature* creature) : ScriptedAI(creature)
+        {
+            creature->SetReactState(REACT_PASSIVE);
+        }
+
+        void Reset() override
+        {
+            switch (_size)
+            {
+                case 1:
+                    me->AddAura(SPELL_WINTERSABER_CUB_175, me);
+                    break;
+                case 2:
+                    me->AddAura(SPELL_WINTERSABER_CUB_150, me);
+                    break;
+                case 3:
+                    me->AddAura(SPELL_WINTERSABER_CUB_125, me);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        void IsSummonedBy(Unit* summoner) override
+        {
+            if (AuraEffect* aurEff = summoner->GetAuraEffect(SPELL_WINTERSABER_CUB_DAILY_COUNTER, EFFECT_0))
+            {
+                if (aurEff->GetAmount() >= 15)
+                    _size = 1;
+                else if (aurEff->GetAmount() >= 10 && aurEff->GetAmount() < 15)
+                    _size = 2;
+                if (aurEff->GetAmount() >= 5 && aurEff->GetAmount() < 10)
+                    _size = 3;
+            }
+        }
+
+        void AttackStart(Unit* /*attacker*/) override {}
+
+        void UpdateAI(uint32 /*diff*/) override {}
+
+    private:
+        uint32 _size;
+    };
+};
